@@ -46,6 +46,14 @@ def process_file(file: AskFileResponse):
 
 
 def create_docsearch(file: AskFileResponse):
+    """Creates a document search vectorstore from the uploaded file.
+
+    Args:
+        file (AskFileResponse): Uploaded file
+
+    Returns:
+        vectorstore: Document search vectorstore
+    """
     docs = process_file(file)
 
     # save data in user session
@@ -58,6 +66,9 @@ def create_docsearch(file: AskFileResponse):
 
 @cl.on_chat_start
 async def start():
+    """Receive a file from the user, and create a document search vectorstore from it.
+    Then create a chain with the vectorstore and a language model.
+    """
     await cl.Message(
         "Welcome to Document based QnA! You can upload PDF or text files to query on them."
     ).send()
@@ -94,7 +105,12 @@ async def start():
 
 
 @cl.on_message
-async def main(message):
+async def main(message: str):
+    """Answer the question using the chain. If the answer is streamed, also stream the sources.
+
+    Args:
+        message (str): Question
+    """
     # retrieve chain built on startup
     chain: RetrievalQAWithSourcesChain = cl.user_session.get("chain")  # type: ignore
 
@@ -130,7 +146,7 @@ async def main(message):
             txt = docs[idx].page_content
             source_elems.append(cl.Text(content=txt, name=source))
 
-    # send the answer
+    # send the answer and sources
     if cb.has_streamed_final_answer and cb.final_stream is not None:
         cb.final_stream.elements = source_elems
         await cb.final_stream.update()
